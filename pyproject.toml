@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "freqdict"
+version = "0.1.0"
+description = "Frequency dictionaries (wordforms, lemmas, POS, n-grams) for Ukrainian text"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Yurii Karpenko" }]
+dependencies = [
+    "pymorphy3",
+    "pymorphy3-dicts-uk",
+    "pandas",
+    "openpyxl",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+freqdict = "freqdict.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

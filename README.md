@@ -1,3 +1,5 @@
+**English** | [Українська](README.uk.md)
+
 # freqdict — Frequency Dictionaries for Ukrainian Text
 
 A command-line tool and Python library that builds a complete frequency

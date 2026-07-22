@@ -53,6 +53,8 @@ written:
   out/freq_dict.db
 ```
 
+![Вивід freqdict і фрагмент lemmas.csv](docs/screenshot.png)
+
 Фрагмент `lemmas.csv` (Іван Франко, *«Захар Беркут»*, суспільне надбання):
 
 | item     | total | sub_1 | sub_2 | sub_3 | sub_4 |

@@ -50,6 +50,8 @@ written:
   out/freq_dict.db
 ```
 
+![freqdict CLI output and lemmas.csv sample](docs/screenshot.png)
+
 Sample of `lemmas.csv` (Ivan Franko, *Zakhar Berkut*, public domain):
 
 | item     | total | sub_1 | sub_2 | sub_3 | sub_4 |

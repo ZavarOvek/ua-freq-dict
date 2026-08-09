@@ -1,4 +1,5 @@
 """Tests for freqdict core modules."""
+
 from pathlib import Path
 
 import pytest
@@ -85,8 +86,7 @@ class TestCli:
         src = tmp_path / "in.txt"
         src.write_text(SAMPLE, encoding="utf-8")
         out = tmp_path / "out"
-        code = main([str(src), "-o", str(out), "--subsamples", "2",
-                     "--xlsx", "--sqlite"])
+        code = main([str(src), "-o", str(out), "--subsamples", "2", "--xlsx", "--sqlite"])
         assert code == 0
         assert (out / "wordforms.csv").exists()
         assert (out / "freq_dict.xlsx").exists()

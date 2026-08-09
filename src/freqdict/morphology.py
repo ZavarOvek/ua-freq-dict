@@ -1,4 +1,5 @@
 """Lemmatization and POS tagging via pymorphy3 with per-token caching."""
+
 from __future__ import annotations
 
 from functools import lru_cache

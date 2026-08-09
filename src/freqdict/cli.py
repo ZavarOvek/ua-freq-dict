@@ -1,4 +1,5 @@
 """Command-line interface: build a frequency dictionary from a text file."""
+
 from __future__ import annotations
 
 import argparse
@@ -18,18 +19,27 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     p.add_argument("input", type=Path, help="input .txt file (UTF-8)")
-    p.add_argument("-o", "--out", type=Path, default=Path("out"),
-                   help="output directory (default: ./out)")
-    p.add_argument("--limit", type=int, default=0,
-                   help="use only the first N tokens (0 = no limit)")
-    p.add_argument("--subsamples", type=int, default=20,
-                   help="number of subsamples for frequency columns (default: 20)")
-    p.add_argument("--ngrams", type=int, nargs="*", default=[2, 3],
-                   help="n-gram sizes to compute (default: 2 3)")
-    p.add_argument("--xlsx", action="store_true",
-                   help="also write a multi-sheet Excel file")
-    p.add_argument("--sqlite", action="store_true",
-                   help="also write an SQLite database")
+    p.add_argument(
+        "-o", "--out", type=Path, default=Path("out"), help="output directory (default: ./out)"
+    )
+    p.add_argument(
+        "--limit", type=int, default=0, help="use only the first N tokens (0 = no limit)"
+    )
+    p.add_argument(
+        "--subsamples",
+        type=int,
+        default=20,
+        help="number of subsamples for frequency columns (default: 20)",
+    )
+    p.add_argument(
+        "--ngrams",
+        type=int,
+        nargs="*",
+        default=[2, 3],
+        help="n-gram sizes to compute (default: 2 3)",
+    )
+    p.add_argument("--xlsx", action="store_true", help="also write a multi-sheet Excel file")
+    p.add_argument("--sqlite", action="store_true", help="also write an SQLite database")
     return p
 
 

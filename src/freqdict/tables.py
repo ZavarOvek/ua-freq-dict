@@ -1,4 +1,5 @@
 """Frequency tables (wordforms / lemmas / POS, with subsamples) and n-grams."""
+
 from __future__ import annotations
 
 from collections import Counter
@@ -12,9 +13,7 @@ Level = str  # "wordform" | "lemma" | "pos"
 _LEVEL_INDEX = {"wordform": 0, "lemma": 1, "pos": 2}
 
 
-def frequency_table(
-    tokens: list[str], level: Level, n_subsamples: int = 20
-) -> pd.DataFrame:
+def frequency_table(tokens: list[str], level: Level, n_subsamples: int = 20) -> pd.DataFrame:
     """Build a frequency table for one annotation level.
 
     Columns: ``item``, ``total`` and one ``sub_i`` column per subsample.
@@ -41,12 +40,8 @@ def ngram_table(tokens: list[str], n: int) -> pd.DataFrame:
     """Token-level n-gram frequency table with columns ``ngram``, ``total``."""
     if n < 1:
         raise ValueError("n must be >= 1")
-    grams = Counter(
-        " ".join(tokens[i : i + n]) for i in range(len(tokens) - n + 1)
-    )
-    return pd.DataFrame(
-        [{"ngram": g, "total": c} for g, c in grams.most_common()]
-    )
+    grams = Counter(" ".join(tokens[i : i + n]) for i in range(len(tokens) - n + 1))
+    return pd.DataFrame([{"ngram": g, "total": c} for g, c in grams.most_common()])
 
 
 def build_all(

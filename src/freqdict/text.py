@@ -1,4 +1,5 @@
 """Text cleaning and tokenization for Ukrainian text."""
+
 from __future__ import annotations
 
 import re

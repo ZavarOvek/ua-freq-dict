@@ -1,4 +1,5 @@
 """Export frequency tables to CSV, Excel and SQLite."""
+
 from __future__ import annotations
 
 import sqlite3

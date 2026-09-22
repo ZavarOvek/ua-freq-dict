@@ -5,6 +5,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+- N-grams no longer span sentence boundaries: the CLI tokenizes sentence by
+  sentence (`.`, `!`, `?`, `…`) and counts n-grams inside each. New
+  `tokenize_sentences()` and `segmented_ngram_table()`; `build_all()` takes an
+  optional `sentences=` argument. `ngram_table()` keeps its old behaviour.
+- A word containing `ъ`, `ы`, `э` or `ё` is dropped whole instead of being cut
+  into Ukrainian-looking fragments (`объект` used to yield `об` and `ект`).
+- `--subsamples 0` and `--ngrams 0` are rejected by argparse with exit code 2
+  instead of a traceback.
+- `--sqlite` export closes its connection; the database file is no longer
+  held open (locked on Windows) after the export returns.
+
 ### Changed
 - Adopted `ruff format` as the project formatter; the whole tree was
   reformatted in a single dedicated commit (see `.git-blame-ignore-revs`).

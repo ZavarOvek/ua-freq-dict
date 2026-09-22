@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pandas as pd
@@ -28,7 +29,9 @@ def to_excel(tables: dict[str, pd.DataFrame], out_path: Path) -> Path:
 
 def to_sqlite(tables: dict[str, pd.DataFrame], out_path: Path) -> Path:
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(out_path) as conn:
+    # sqlite3's own context manager only commits; closing() releases the file,
+    # which matters on Windows, where an open connection keeps it locked.
+    with closing(sqlite3.connect(out_path)) as conn, conn:
         for name, df in tables.items():
             df.to_sql(name, conn, if_exists="replace", index=False)
     return out_path

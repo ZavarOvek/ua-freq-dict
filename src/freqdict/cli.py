@@ -7,7 +7,26 @@ import sys
 from pathlib import Path
 
 from . import export, tables
-from .text import tokenize
+from .text import tokenize_sentences
+
+
+def _positive_int(raw: str) -> int:
+    value = int(raw)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"must be >= 1, got {value}")
+    return value
+
+
+def _truncate(sentences: list[list[str]], limit: int) -> list[list[str]]:
+    """Keep only the first ``limit`` tokens, preserving sentence boundaries."""
+    kept: list[list[str]] = []
+    left = limit
+    for sentence in sentences:
+        if left <= 0:
+            break
+        kept.append(sentence[:left])
+        left -= len(sentence)
+    return kept
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,13 +46,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--subsamples",
-        type=int,
+        type=_positive_int,
         default=20,
         help="number of subsamples for frequency columns (default: 20)",
     )
     p.add_argument(
         "--ngrams",
-        type=int,
+        type=_positive_int,
         nargs="*",
         default=[2, 3],
         help="n-gram sizes to compute (default: 2 3)",
@@ -52,18 +71,20 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: cannot read {args.input}: {exc}", file=sys.stderr)
         return 1
 
-    tokens = tokenize(text)
-    if not tokens:
+    sentences = tokenize_sentences(text)
+    if not sentences:
         print("error: no Ukrainian tokens found in input", file=sys.stderr)
         return 1
     if args.limit > 0:
-        tokens = tokens[: args.limit]
+        sentences = _truncate(sentences, args.limit)
+    tokens = [token for sentence in sentences for token in sentence]
 
     print(f"tokens: {len(tokens)}")
     result = tables.build_all(
         tokens,
         n_subsamples=args.subsamples,
         ngram_sizes=tuple(args.ngrams),
+        sentences=sentences,
     )
 
     csv_paths = export.to_csv(result, args.out)

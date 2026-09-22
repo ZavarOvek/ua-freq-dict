@@ -6,8 +6,15 @@ import re
 
 # Normalize all apostrophe variants to the standard Ukrainian apostrophe
 _APOSTROPHES = re.compile(r"[\u2019\u02BC\u0060\u00B4']")
-# Ukrainian letters (incl. ґ, є, і, ї), apostrophe and hyphen inside words
-_TOKEN = re.compile(r"[а-щьюяєіїґ]+(?:['\-][а-щьюяєіїґ]+)*", re.IGNORECASE)
+# Any Cyrillic word (Ukrainian letters plus ъ, ы, э, ё), apostrophe and hyphen
+# inside words. The wider class matters: matching only Ukrainian letters would
+# cut a Russian word like "объект" into the fragments "об" and "ект" and count
+# them as Ukrainian tokens. Words are matched whole, then filtered.
+_WORD = re.compile(r"[а-яёєіїґ]+(?:['\-][а-яёєіїґ]+)*", re.IGNORECASE)
+# Letters that do not occur in Ukrainian orthography
+_NON_UKRAINIAN = re.compile(r"[ъыэё]", re.IGNORECASE)
+# Sentence-final punctuation; n-grams are not allowed to span it
+_SENTENCE_END = re.compile(r"[.!?\u2026]+")
 
 
 def normalize(text: str) -> str:
@@ -19,9 +26,19 @@ def tokenize(text: str) -> list[str]:
     """Extract Ukrainian word tokens from raw text.
 
     Keeps apostrophes (м'ята) and in-word hyphens (будь-хто),
-    drops digits, latin words and punctuation.
+    drops digits, latin words, punctuation and whole words containing
+    letters absent from Ukrainian (ъ, ы, э, ё).
     """
-    return _TOKEN.findall(normalize(text))
+    return [w for w in _WORD.findall(normalize(text)) if not _NON_UKRAINIAN.search(w)]
+
+
+def tokenize_sentences(text: str) -> list[list[str]]:
+    """Tokenize ``text`` sentence by sentence; empty sentences are dropped.
+
+    Sentence boundaries are ``.``, ``!``, ``?`` and ``…``. Abbreviations
+    ("т. д.") split too, which only costs n-grams across that point.
+    """
+    return [tokens for part in _SENTENCE_END.split(text) if (tokens := tokenize(part))]
 
 
 def split_subsamples(tokens: list[str], n_subsamples: int) -> list[list[str]]:

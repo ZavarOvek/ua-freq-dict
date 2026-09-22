@@ -19,11 +19,13 @@ methodology after V. Perebyinis).
 ## Features
 
 - Robust Ukrainian tokenization: apostrophe normalization (`м’ята` = `м'ята`),
-  in-word hyphens (`будь-хто`), Latin/digits filtered out
+  in-word hyphens (`будь-хто`), Latin/digits filtered out; words with
+  letters absent from Ukrainian (`ы`, `э`, `ъ`, `ё`) are dropped whole
 - Lemmatization and POS tagging via `pymorphy3` with caching for speed
 - Three frequency tables (wordforms, lemmas, POS) with configurable subsample
   columns — the standard input format for quantitative-linguistics statistics
-- Token-level n-grams (any sizes, default bigrams + trigrams)
+- Token-level n-grams counted within sentences (any sizes, default bigrams
+  + trigrams)
 - Export to CSV (UTF-8 BOM, Excel-friendly), multi-sheet XLSX and SQLite
 - Fully tested (pytest), no notebook dependencies, installable CLI
 
@@ -68,10 +70,11 @@ Sample of `lemmas.csv` (Ivan Franko, *Zakhar Berkut*, public domain):
 ## As a library
 
 ```python
-from freqdict import tokenize, build_all
+from freqdict import build_all, tokenize_sentences
 
-tokens = tokenize(open("input.txt", encoding="utf-8").read())
-tables = build_all(tokens, n_subsamples=20, ngram_sizes=(2, 3))
+sentences = tokenize_sentences(open("input.txt", encoding="utf-8").read())
+tokens = [t for s in sentences for t in s]
+tables = build_all(tokens, n_subsamples=20, ngram_sizes=(2, 3), sentences=sentences)
 tables["lemmas"].head()
 ```
 

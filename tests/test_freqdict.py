@@ -1,5 +1,7 @@
 """Tests for freqdict core modules."""
 
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -7,7 +9,7 @@ import pytest
 from freqdict import tables
 from freqdict.cli import main
 from freqdict.morphology import analyze
-from freqdict.text import normalize, split_subsamples, tokenize
+from freqdict.text import normalize, split_subsamples, tokenize, tokenize_sentences
 
 SAMPLE = "Мова — це зброя. М’ята пахне, будь-хто скаже: мови живуть!"
 
@@ -27,6 +29,16 @@ class TestTokenize:
 
     def test_normalize_lowercases(self):
         assert normalize("МОВА") == "мова"
+
+    def test_non_ukrainian_cyrillic_word_dropped_whole(self):
+        # Without the whole-word filter "объект" became the tokens "об", "ект".
+        assert tokenize("Він сказав: объект, это, всё") == ["він", "сказав"]
+
+    def test_sentences(self):
+        assert tokenize_sentences("Прийшла весна. Сонце світить!  ...") == [
+            ["прийшла", "весна"],
+            ["сонце", "світить"],
+        ]
 
 
 class TestSubsamples:
@@ -76,6 +88,21 @@ class TestTables:
         assert df.iloc[0]["ngram"] == "а б"
         assert df.iloc[0]["total"] == 2
 
+    def test_segmented_ngrams_do_not_cross_sentences(self):
+        df = tables.segmented_ngram_table([["прийшла", "весна"], ["сонце", "світить"]], 2)
+        assert sorted(df["ngram"]) == ["прийшла весна", "сонце світить"]
+
+    def test_segmented_ngrams_short_segment_yields_empty_table(self):
+        df = tables.segmented_ngram_table([["одне"]], 2)
+        assert df.empty
+        assert list(df.columns) == ["ngram", "total"]
+
+    def test_build_all_uses_sentences_for_ngrams(self):
+        sentences = tokenize_sentences("Прийшла весна. Сонце світить.")
+        tokens = [t for s in sentences for t in s]
+        result = tables.build_all(tokens, n_subsamples=2, ngram_sizes=(2,), sentences=sentences)
+        assert "весна сонце" not in set(result["ngrams_2"]["ngram"])
+
     def test_build_all_keys(self):
         result = tables.build_all(tokenize(SAMPLE), n_subsamples=2)
         assert set(result) == {"wordforms", "lemmas", "pos", "ngrams_2", "ngrams_3"}
@@ -94,3 +121,42 @@ class TestCli:
 
     def test_missing_file(self, tmp_path: Path):
         assert main([str(tmp_path / "nope.txt")]) == 1
+
+    def test_cli_ngrams_stay_inside_sentences(self, tmp_path: Path):
+        src = tmp_path / "in.txt"
+        src.write_text("Прийшла весна. Сонце світить.", encoding="utf-8")
+        out = tmp_path / "out"
+        assert main([str(src), "-o", str(out), "--subsamples", "2", "--ngrams", "2"]) == 0
+        text = (out / "ngrams_2.csv").read_text(encoding="utf-8-sig")
+        assert "весна сонце" not in text
+        assert "прийшла весна" in text
+
+    def test_cli_limit_counts_tokens_across_sentences(self, tmp_path: Path):
+        src = tmp_path / "in.txt"
+        src.write_text("Прийшла весна. Сонце світить.", encoding="utf-8")
+        out = tmp_path / "out"
+        assert main([str(src), "-o", str(out), "--limit", "3", "--subsamples", "1"]) == 0
+        text = (out / "wordforms.csv").read_text(encoding="utf-8-sig")
+        assert "сонце" in text
+        assert "світить" not in text
+
+    @pytest.mark.parametrize("flag", ["--subsamples", "--ngrams"])
+    def test_cli_rejects_non_positive(self, tmp_path: Path, flag: str):
+        src = tmp_path / "in.txt"
+        src.write_text(SAMPLE, encoding="utf-8")
+        with pytest.raises(SystemExit) as exc:
+            main([str(src), "-o", str(tmp_path / "out"), flag, "0"])
+        assert exc.value.code == 2
+
+    def test_sqlite_file_released(self, tmp_path: Path):
+        src = tmp_path / "in.txt"
+        src.write_text(SAMPLE, encoding="utf-8")
+        out = tmp_path / "out"
+        assert main([str(src), "-o", str(out), "--subsamples", "2", "--sqlite"]) == 0
+        db = out / "freq_dict.db"
+        # Renaming an open file fails on Windows; everywhere it proves the
+        # tables were committed and readable after the export returned.
+        moved = db.rename(tmp_path / "moved.db")
+        with closing(sqlite3.connect(moved)) as conn:
+            (n,) = conn.execute("SELECT COUNT(*) FROM wordforms").fetchone()
+        assert n > 0

@@ -4,8 +4,13 @@ from __future__ import annotations
 
 import re
 
-# Normalize all apostrophe variants to the standard Ukrainian apostrophe
-_APOSTROPHES = re.compile(r"[\u2019\u02BC\u0060\u00B4']")
+# Apostrophe look-alikes (’ ʼ ‘ ` ´ ′ ʹ ＇) between two letters. pymorphy3-dicts-uk
+# knows only the ASCII apostrophe, so any other variant makes a word unknown and
+# its lemma wrong. Quotes next to a word (‘цитата’) are not between letters and
+# stay untouched.
+_APOSTROPHE_VARIANTS = re.compile(
+    r"(?<=[^\W\d_])[\u2019\u02BC\u2018\u0060\u00B4\u2032\u02B9\uFF07](?=[^\W\d_])"
+)
 # Any Cyrillic word (Ukrainian letters plus ъ, ы, э, ё), apostrophe and hyphen
 # inside words. The wider class matters: matching only Ukrainian letters would
 # cut a Russian word like "объект" into the fragments "об" and "ект" and count
@@ -17,9 +22,14 @@ _NON_UKRAINIAN = re.compile(r"[ъыэё]", re.IGNORECASE)
 _SENTENCE_END = re.compile(r"[.!?\u2026]+")
 
 
+def normalize_apostrophes(text: str) -> str:
+    """Replace intra-word apostrophe variants with the ASCII apostrophe (U+0027)."""
+    return _APOSTROPHE_VARIANTS.sub("'", text)
+
+
 def normalize(text: str) -> str:
     """Lowercase and normalize apostrophe variants."""
-    return _APOSTROPHES.sub("'", text).lower()
+    return normalize_apostrophes(text).lower()
 
 
 def tokenize(text: str) -> list[str]:

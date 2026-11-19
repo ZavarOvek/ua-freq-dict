@@ -6,6 +6,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Fixed
+- Apostrophe variants (`’ ʼ ‘ \` ´ ′ ʹ ＇`) between two letters are normalized to
+  the ASCII apostrophe by the new `normalize_apostrophes()`. pymorphy3-dicts-uk
+  knows only U+0027, so `мʼясо` used to be unknown and get a wrong lemma.
+  Quotes around a word (`‘цитата’`) are left alone.
 - N-grams no longer span sentence boundaries: the CLI tokenizes sentence by
   sentence (`.`, `!`, `?`, `…`) and counts n-grams inside each. New
   `tokenize_sentences()` and `segmented_ngram_table()`; `build_all()` takes an

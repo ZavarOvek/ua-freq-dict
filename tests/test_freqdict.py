@@ -9,9 +9,27 @@ import pytest
 from freqdict import tables
 from freqdict.cli import main
 from freqdict.morphology import analyze
-from freqdict.text import normalize, split_subsamples, tokenize, tokenize_sentences
+from freqdict.text import (
+    normalize,
+    normalize_apostrophes,
+    split_subsamples,
+    tokenize,
+    tokenize_sentences,
+)
 
 SAMPLE = "Мова — це зброя. М’ята пахне, будь-хто скаже: мови живуть!"
+
+
+APOSTROPHE_VARIANTS = [
+    "\u2019",
+    "\u02bc",
+    "\u2018",
+    "\u0060",
+    "\u00b4",
+    "\u2032",
+    "\u02b9",
+    "\uff07",
+]
 
 
 class TestTokenize:
@@ -20,6 +38,17 @@ class TestTokenize:
 
     def test_apostrophe_variants_normalized(self):
         assert tokenize("м’ята і м'ята") == ["м'ята", "і", "м'ята"]
+
+    @pytest.mark.parametrize("variant", APOSTROPHE_VARIANTS)
+    def test_every_apostrophe_variant_normalized(self, variant: str):
+        assert normalize_apostrophes(f"м{variant}ясо") == "м'ясо"
+        assert tokenize(f"М{variant}ясо") == ["м'ясо"]
+
+    @pytest.mark.parametrize("variant", APOSTROPHE_VARIANTS)
+    def test_quotes_around_words_untouched(self, variant: str):
+        quoted = f"{variant}цитата{variant}"
+        assert normalize_apostrophes(quoted) == quoted
+        assert tokenize(quoted) == ["цитата"]
 
     def test_hyphenated_word_kept(self):
         assert "будь-хто" in tokenize(SAMPLE)
@@ -66,6 +95,22 @@ class TestMorphology:
         lemma, pos = analyze("мови")
         assert lemma == "мова"
         assert pos == "NOUN"
+
+    @pytest.mark.parametrize("variant", APOSTROPHE_VARIANTS)
+    def test_apostrophe_variant_has_same_lemma_as_ascii(self, variant: str):
+        (variant_token,) = tokenize(f"м{variant}ясо")
+        assert analyze(variant_token) == analyze("м'ясо")
+        assert analyze("з'їв")[0] == "з'їсти"
+        assert analyze(tokenize(f"з{variant}їв")[0]) == analyze("з'їв")
+
+    def test_variants_merge_in_frequency_tables(self):
+        tokens = tokenize("м’ясо мʼясо м'ясо")
+        result = tables.build_all(tokens, n_subsamples=1)
+        wordforms, lemmas = result["wordforms"], result["lemmas"]
+        assert wordforms["item"].tolist() == ["м'ясо"]
+        assert wordforms["total"].tolist() == [3]
+        assert len(lemmas) == 1
+        assert lemmas["total"].tolist() == [3]
 
     def test_unknown_token_does_not_crash(self):
         lemma, pos = analyze("ґзиґзаґ")
